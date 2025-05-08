@@ -1,0 +1,13 @@
+1. Install dependencies:
+    pip install fastapi uvicorn requests openai
+    pip install python-multipart
+2. Run the FastAPI server
+    uvicorn job_scraper_summarizer:app --reload
+3. Open your browser and navigate to
+http://127.0.0.1:8000/
+
+For Streamlit job
+1. pip install streamlit
+streamlit run job_scraper_app.py
+Run the Streamlit app:
+Open your browser and navigate to the URL provided by Streamlit (e.g., http://localhost:8501)
