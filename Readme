@@ -11,3 +11,25 @@ For Streamlit job
 streamlit run job_scraper_app.py
 Run the Streamlit app:
 Open your browser and navigate to the URL provided by Streamlit (e.g., http://localhost:8501)
+
+2. Push the code to github
+cd POC/jobSearch
+git init
+git add .
+git commit -m "Initial commit for job search project"
+git remote add origin https://github.com/your-username/job-search-app.git
+git branch -M main
+git push -u origin main
+
+3. Sign in to Streamlit Community Cloud:
+
+Go to Streamlit Community Cloud and sign in with your GitHub account.
+Deploy Your App:
+
+Click on "New App".
+Select your GitHub repository and the branch containing your app.
+Specify the file path to your Streamlit app (e.g., job_scraper_streamlit.py).
+Click Deploy.
+Access Your App:
+
+Once deployed, Streamlit will provide you with a public URL for your app (e.g., https://your-app-name.streamlit.app).

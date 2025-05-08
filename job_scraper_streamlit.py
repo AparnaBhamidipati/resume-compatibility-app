@@ -10,7 +10,7 @@ OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]  # OpenAI API key
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Function to fetch job data from SerpAPI
-def fetch_google_jobs(query: str, location: str, num_results: int = 5):
+def fetch_google_jobs(query: str, location: str, num_results: int = 10):
     params = {
         "engine": "google_jobs",
         "q": query,
