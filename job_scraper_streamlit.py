@@ -3,9 +3,9 @@ import requests
 import os
 from openai import OpenAI
 
-# Replace with your actual API keys
-SERPAPI_API_KEY = os.environ["SERPAPI_API_KEY"]  # SerpAPI key
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]  # OpenAI API key
+# Load API keys from environment variables
+SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")  # SerpAPI key
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # OpenAI API key
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -17,18 +17,25 @@ def fetch_google_jobs(query: str, location: str, num_results: int = 10):
         "location": location,
         "api_key": SERPAPI_API_KEY,
     }
-    response = requests.get("https://serpapi.com/search", params=params)
-    data = response.json()
+    try:
+        response = requests.get("https://serpapi.com/search", params=params)
+        response.raise_for_status()  # Raise an error for HTTP issues
+        data = response.json()
 
-    job_results = data.get("jobs_results", [])[:num_results]
-    summaries = []
-    for job in job_results:
-        title = job.get("title", "N/A")
-        company = job.get("company_name", "N/A")
-        portal = job.get("detected_extensions", {}).get("source", "N/A")  # Extract job portal details
-        summaries.append(f"**Title:** {title}\n**Company:** {company}\n**Job Portal:** {portal}\n")
+        job_results = data.get("jobs_results", [])[:num_results]
+        if not job_results:
+            return "No job postings found for the given query and location."
 
-    return "\n\n---\n\n".join(summaries)
+        job_listings = []
+        for job in job_results:
+            title = job.get("title", "N/A")
+            company = job.get("company_name", "N/A")
+            portal = job.get("detected_extensions", {}).get("source", "Unknown Portal")  # Fallback for portal
+            job_listings.append(f"**Title:** {title}\n**Company:** {company}\n**Job Portal:** {portal}\n")
+
+        return "\n\n---\n\n".join(job_listings)
+    except requests.exceptions.RequestException as e:
+        return f"Error fetching job data: {e}"
 
 # Function to summarize job descriptions using OpenAI
 def summarize_with_gpt(job_descriptions: str):
@@ -65,9 +72,10 @@ if st.button("Search and Summarize"):
         st.subheader("Job Listings")
         st.text(job_data)
 
-        with st.spinner("Summarizing job descriptions..."):
-            summary = summarize_with_gpt(job_data)
-        st.subheader("Summary")
-        st.text(summary)
+        if "No job postings found" not in job_data and "Error" not in job_data:
+            with st.spinner("Summarizing job descriptions..."):
+                summary = summarize_with_gpt(job_data)
+            st.subheader("Summary")
+            st.text(summary)
     else:
         st.error("Please enter both Job Title and Location.")
