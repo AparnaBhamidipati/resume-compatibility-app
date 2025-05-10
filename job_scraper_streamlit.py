@@ -9,8 +9,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 # Load API keys from environment variables
-SERPAPI_API_KEY = st.secrets["api"]["SERPAPI_API_KEY"]  # SerpAPI key
-OPENAI_API_KEY = st.secrets["api"]["OPENAI_API_KEY"]  # OpenAI API key
+SERPAPI_API_KEY = st.secrets["SERPAPI_API_KEY"]  # SerpAPI key
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]  # OpenAI API key
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
