@@ -3,44 +3,62 @@ import requests
 import os
 import pandas as pd  # Import pandas for tabular data handling
 from openai import OpenAI
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Load API keys from environment variables
-SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY")  # SerpAPI key
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # OpenAI API key
+SERPAPI_API_KEY = st.secrets["api"]["SERPAPI_API_KEY"]  # SerpAPI key
+OPENAI_API_KEY = st.secrets["api"]["OPENAI_API_KEY"]  # OpenAI API key
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Function to fetch the latest job postings from SerpAPI
 def fetch_latest_jobs(query: str, location: str, num_results: int = 10):
+    if not query.strip() or not location.strip():
+        return "Job Title and Location cannot be empty."
+
     params = {
         "engine": "google_jobs",
         "q": query,
         "location": location,
         "api_key": SERPAPI_API_KEY,
     }
-    response = requests.get("https://serpapi.com/search", params=params)
-    data = response.json()
+    try:
+        response = requests.get("https://serpapi.com/search", params=params)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        data = response.json()
 
-    job_results = data.get("jobs_results", [])[:num_results]
-    job_listings = []
-    for job in job_results:
-        title = job.get("title", "N/A")
-        company = job.get("company_name", "N/A")
-        portal = job.get("via", "Unknown Portal")
-        job_location = job.get("location", "N/A")  # Extract job location
-        posting_date = job.get("detected_extensions", {}).get("posted_at", "N/A")  # Extract job posting date
-        job_listings.append({
-            "Title": title,
-            "Company": company,
-            "Portal": portal,
-            "Location": job_location,
-            "Posting Date": posting_date
-        })
+        job_results = data.get("jobs_results", [])[:num_results]
+        if not job_results:
+            return "No job postings found for the given query and location."
 
-    return job_listings
+        job_listings = []
+        for job in job_results:
+            title = job.get("title", "N/A")
+            company = job.get("company_name", "N/A")
+            portal = job.get("via", "Unknown Portal")
+            job_location = job.get("location", "N/A")  # Extract job location
+            posting_date = job.get("detected_extensions", {}).get("posted_at", "N/A")  # Extract job posting date
+            job_listings.append({
+                "Title": title,
+                "Company": company,
+                "Portal": portal,
+                "Location": job_location,
+                "Posting Date": posting_date
+            })
+
+        return job_listings
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching job data: {e}")
+        return f"Error fetching job data: {e}"
 
 # Function to summarize job descriptions using OpenAI
 def summarize_with_gpt(job_descriptions: str):
+    if not job_descriptions.strip():
+        return "No job descriptions provided for summarization."
+
     prompt = (
         "Based on the following job descriptions, summarize the most common "
         "skills, qualifications, years of experience, and leadership expectations:\n\n"
@@ -55,12 +73,19 @@ def summarize_with_gpt(job_descriptions: str):
             temperature=0.3,
             max_tokens=800,
         )
-        return response.choices[0].message.content
+        content = response.choices[0].message.content.strip()
+        if not content:
+            return "No valid response received from OpenAI."
+        return content
     except Exception as e:
-        return f"Error: {e}"
+        logging.error(f"Error summarizing job descriptions: {e}")
+        return f"Error summarizing job descriptions: {e}"
 
 # Function to generate relevant interview preparation links based on the job summary
 def get_interview_links(summary: str):
+    if not summary.strip():
+        return "No job summary provided for generating interview links."
+
     prompt = (
         "Based on the following job summary, suggest useful and relevant links for preparing for interviews. "
         "Include links for technical preparation, behavioral interviews, and general interview tips:\n\n"
@@ -79,9 +104,13 @@ def get_interview_links(summary: str):
             temperature=0.3,
             max_tokens=800,
         )
-        return response.choices[0].message.content
+        content = response.choices[0].message.content.strip()
+        if not content:
+            return "No valid response received from OpenAI."
+        return content
     except Exception as e:
-        return f"Error: {e}"
+        logging.error(f"Error generating interview links: {e}")
+        return f"Error generating interview links: {e}"
 
 # Streamlit App
 st.title("Job Search and Interview Preparation")
@@ -96,15 +125,15 @@ if st.button("Search and Get Interview Preparation Links"):
         with st.spinner("Fetching the latest job postings..."):
             job_data = fetch_latest_jobs(query=job_title, location=location)
         st.subheader("Latest Job Postings")
-        if job_data:
+        if isinstance(job_data, list) and job_data:
             # Convert job data to a pandas DataFrame for tabular display
             job_df = pd.DataFrame(job_data)
             st.table(job_df)  # Display the job data in a table
         else:
-            st.write("No job postings found for the given query and location.")
+            st.write(job_data)  # Display error or no data message
 
         with st.spinner("Summarizing job descriptions..."):
-            job_descriptions = "\n".join([f"{job['Title']} at {job['Company']}" for job in job_data])
+            job_descriptions = "\n".join([f"{job['Title']} at {job['Company']}" for job in job_data]) if isinstance(job_data, list) else ""
             summary = summarize_with_gpt(job_descriptions)
         st.subheader("Job Summary")
         st.text(summary)
