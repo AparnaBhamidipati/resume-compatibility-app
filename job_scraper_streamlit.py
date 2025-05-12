@@ -81,16 +81,58 @@ def fetch_latest_jobs(query: str, location: str, num_results: int = 10):
         logging.error(f"Error fetching job data: {e}")
         return f"Error fetching job data: {e}"
 
+# Function to summarize job descriptions using OpenAI
+def summarize_with_gpt(job_descriptions: str):
+    prompt = (
+        "Based on the following job descriptions, summarize the most common "
+        "skills, qualifications, years of experience, and leadership expectations:\n\n"
+        f"{job_descriptions}\n\n"
+        "Provide the summary in bullet points under relevant categories."
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=800,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        logging.error(f"Error summarizing job descriptions: {e}")
+        return f"Error summarizing job descriptions: {e}"
+
+# Function to generate relevant interview preparation links based on the job summary
+def get_interview_links(summary: str):
+    prompt = (
+        "Based on the following job summary, suggest useful and relevant links for preparing for interviews. "
+        "Include links for technical preparation, behavioral interviews, and general interview tips:\n\n"
+        f"{summary}\n\n"
+        "Provide the links in the following format:\n"
+        "- Topic: [Link]\n"
+        "For example:\n"
+        "- Behavioral Interviews: https://example.com/behavioral\n"
+        "- Technical Interviews: https://example.com/technical\n"
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=800,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        logging.error(f"Error generating interview links: {e}")
+        return f"Error generating interview links: {e}"
+
 # Streamlit App
 st.title("Job Search and Interview Preparation")
 
 # Input fields for job title and location
 job_title = st.text_input("Enter Job Title", placeholder="e.g., Data Scientist")
 location = st.text_input("Enter Location", placeholder="e.g., New York")
-
-# Initialize session state for job notifications
-if "previous_jobs" not in st.session_state:
-    st.session_state["previous_jobs"] = []
 
 # Button to trigger the search and interview preparation links
 if st.button("Search and Get Interview Preparation Links"):
@@ -104,12 +146,18 @@ if st.button("Search and Get Interview Preparation Links"):
             job_df = job_df.drop(columns=["Posting Date"])  # Drop parsed date for cleaner display
             st.table(job_df)  # Display the job data in a table
 
-            # Check for new job postings
-            previous_jobs = st.session_state["previous_jobs"]
-            new_jobs = [job for job in job_data if job not in previous_jobs]
-            if new_jobs:
-                st.success(f"{len(new_jobs)} new job(s) found!")
-                st.session_state["previous_jobs"] = job_data  # Update session state
+            # Summarize job descriptions
+            with st.spinner("Summarizing job descriptions..."):
+                job_descriptions = "\n".join([f"{job['Title']} at {job['Company']}" for job in job_data])
+                summary = summarize_with_gpt(job_descriptions)
+            st.subheader("Job Summary")
+            st.text(summary)
+
+            # Generate useful links for interview preparation
+            with st.spinner("Fetching useful links for interview preparation..."):
+                interview_links = get_interview_links(summary)
+            st.subheader("Useful Links for Interview Preparation")
+            st.text(interview_links)
         else:
             st.write(job_data)  # Display error or no data message
     else:
