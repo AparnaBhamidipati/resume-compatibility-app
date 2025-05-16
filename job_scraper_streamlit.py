@@ -81,13 +81,16 @@ def fetch_latest_jobs(query: str, location: str, num_results: int = 10):
         logging.error(f"Error fetching job data: {e}")
         return f"Error fetching job data: {e}"
 
-# Function to summarize job descriptions using OpenAI
-def summarize_with_gpt(job_descriptions: str):
+# Function to calculate compatibility score and suggestions
+def calculate_compatibility(job_description: str, resume_text: str):
     prompt = (
-        "Based on the following job descriptions, summarize the most common "
-        "skills, qualifications, years of experience, and leadership expectations:\n\n"
-        f"{job_descriptions}\n\n"
-        "Provide the summary in bullet points under relevant categories."
+        "Given the following job description and resume, calculate a compatibility score (out of 100) "
+        "and provide suggestions to improve the resume for this job:\n\n"
+        f"Job Description:\n{job_description}\n\n"
+        f"Resume:\n{resume_text}\n\n"
+        "Provide the output in the following format:\n"
+        "- Compatibility Score: <score>\n"
+        "- Suggestions: <suggestions>"
     )
 
     try:
@@ -99,66 +102,68 @@ def summarize_with_gpt(job_descriptions: str):
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        logging.error(f"Error summarizing job descriptions: {e}")
-        return f"Error summarizing job descriptions: {e}"
-
-# Function to generate relevant interview preparation links based on the job summary
-def get_interview_links(summary: str):
-    prompt = (
-        "Based on the following job summary, suggest useful and relevant links for preparing for interviews. "
-        "Include links for technical preparation, behavioral interviews, and general interview tips:\n\n"
-        f"{summary}\n\n"
-        "Provide the links in the following format:\n"
-        "- Topic: [Link]\n"
-        "For example:\n"
-        "- Behavioral Interviews: https://example.com/behavioral\n"
-        "- Technical Interviews: https://example.com/technical\n"
-    )
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=800,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        logging.error(f"Error generating interview links: {e}")
-        return f"Error generating interview links: {e}"
+        logging.error(f"Error calculating compatibility: {e}")
+        return f"Error calculating compatibility: {e}"
 
 # Streamlit App
-st.title("Job Search and Interview Preparation")
+st.title("Job Search and Resume Compatibility Checker")
 
-# Input fields for job title and location
-job_title = st.text_input("Enter Job Title", placeholder="e.g., Data Scientist")
-location = st.text_input("Enter Location", placeholder="e.g., New York")
+# Initialize session state for navigation and selected job
+if "page" not in st.session_state:
+    st.session_state["page"] = "job_listings"
+if "selected_job" not in st.session_state:
+    st.session_state["selected_job"] = None
 
-# Button to trigger the search and interview preparation links
-if st.button("Search and Get Interview Preparation Links"):
-    if job_title and location:
-        with st.spinner("Fetching the latest job postings..."):
-            job_data = fetch_latest_jobs(query=job_title, location=location)
-        st.subheader("Latest Job Postings")
-        if isinstance(job_data, list) and job_data:
-            # Convert job data to a pandas DataFrame for tabular display
-            job_df = pd.DataFrame(job_data)
-            job_df = job_df.drop(columns=["Posting Date"])  # Drop parsed date for cleaner display
-            st.table(job_df)  # Display the job data in a table
+# Job Listings Page
+if st.session_state["page"] == "job_listings":
+    # Input fields for job title and location
+    job_title = st.text_input("Enter Job Title", placeholder="e.g., Data Scientist")
+    location = st.text_input("Enter Location", placeholder="e.g., New York")
 
-            # Summarize job descriptions
-            with st.spinner("Summarizing job descriptions..."):
-                job_descriptions = "\n".join([f"{job['Title']} at {job['Company']}" for job in job_data])
-                summary = summarize_with_gpt(job_descriptions)
-            st.subheader("Job Summary")
-            st.text(summary)
-
-            # Generate useful links for interview preparation
-            with st.spinner("Fetching useful links for interview preparation..."):
-                interview_links = get_interview_links(summary)
-            st.subheader("Useful Links for Interview Preparation")
-            st.text(interview_links)
+    if st.button("Search Jobs"):
+        if job_title and location:
+            with st.spinner("Fetching the latest job postings..."):
+                job_data = fetch_latest_jobs(query=job_title, location=location)
+            st.subheader("Latest Job Postings")
+            if isinstance(job_data, list) and job_data:
+                # Display job listings with clickable titles
+                for i, job in enumerate(job_data):
+                    if st.button(f"{job['Title']} at {job['Company']}"):
+                        st.session_state["selected_job"] = job
+                        st.session_state["page"] = "resume_checker"
+                        st.experimental_rerun()
+            else:
+                st.write(job_data)  # Display error or no data message
         else:
-            st.write(job_data)  # Display error or no data message
-    else:
-        st.error("Please enter both Job Title and Location.")
+            st.error("Please enter both Job Title and Location.")
+
+# Resume Compatibility Page
+elif st.session_state["page"] == "resume_checker":
+    selected_job = st.session_state["selected_job"]
+    if selected_job:
+        st.subheader(f"Job: {selected_job['Title']} at {selected_job['Company']}")
+        st.write(f"**Location:** {selected_job['Location']}")
+        st.write(f"**Portal:** {selected_job['Portal']}")
+        st.write(f"**Posted:** {selected_job['Posting Date (Raw)']}")
+
+        # Upload resume
+        resume_file = st.file_uploader("Upload your resume (PDF or TXT)", type=["pdf", "txt"])
+        if resume_file:
+            # Read resume content
+            if resume_file.type == "application/pdf":
+                import PyPDF2
+                pdf_reader = PyPDF2.PdfReader(resume_file)
+                resume_text = " ".join(page.extract_text() for page in pdf_reader.pages)
+            else:
+                resume_text = resume_file.read().decode("utf-8")
+
+            # Calculate compatibility
+            with st.spinner("Calculating compatibility..."):
+                compatibility_result = calculate_compatibility(selected_job["Title"], resume_text)
+            st.subheader("Compatibility Results")
+            st.text(compatibility_result)
+
+    # Back button
+    if st.button("Back to Job Listings"):
+        st.session_state["page"] = "job_listings"
+        st.experimental_rerun()
