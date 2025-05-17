@@ -1,9 +1,10 @@
 import streamlit as st
-import openai
+from openai import OpenAI
+
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 import PyPDF2
 
 # Initialize OpenAI API key
-openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 def check_resume_compatibility(job_description: str, resume: str) -> str:
     """
@@ -29,12 +30,10 @@ def check_resume_compatibility(job_description: str, resume: str) -> str:
 
     try:
         # Call OpenAI API to calculate compatibility and provide suggestions
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=800,
-        )
+        response = client.chat.completions.create(model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3,
+        max_tokens=800)
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"Error calculating compatibility: {e}"
