@@ -3,7 +3,7 @@ import openai
 import PyPDF2
 
 # Initialize OpenAI API key
-openai.api_key = "your_openai_api_key"
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 def check_resume_compatibility(job_description: str, resume: str) -> str:
     """
