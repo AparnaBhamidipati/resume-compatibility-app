@@ -33,3 +33,23 @@ Click Deploy.
 Access Your App:
 
 Once deployed, Streamlit will provide you with a public URL for your app (e.g., https://your-app-name.streamlit.app).
+
+4. Django app
+Set Up a Django Project
+Run the following commands to create a Django project and app:
+
+pip install django
+django-admin startproject resume_compatibility_project
+cd resume_compatibility_project
+python manage.py startapp resume_compatibility
+
+Define a View for Compatibility Checking
+Create a view in resume_compatibility/views.py to handle the logic for checking resume compatibility.
+
+Run the Django Server
+python manage.py runserver
+
+Possible Causes and Fixes
+1. .env File Not Loaded
+Django does not automatically load environment variables from a .env file. You need to explicitly load the .env file using a library like python-decouple or dotenv.
+pip install python-decouple
