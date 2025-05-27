@@ -1,7 +1,19 @@
-# import streamlit as st
+import streamlit as st
+import logging
 from openai import OpenAI
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+# Load API keys from Streamlit Secrets
+try:
+    SERPAPI_API_KEY = st.secrets["SERPAPI_API_KEY"]
+    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+except KeyError as e:
+    logging.error(f"Missing key in secrets: {e}")
+    st.error(f"Missing key in secrets: {e}")
+    st.stop()
+
 import PyPDF2
 
 # Initialize OpenAI API key
@@ -30,7 +42,7 @@ def check_resume_compatibility(job_description: str, resume: str) -> str:
 
     try:
         # Call OpenAI API to calculate compatibility and provide suggestions
-        response = client.chat.completions.create(model="gpt-4",
+        response = OPENAI_API_KEY.chat.completions.create(model="gpt-4",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         max_tokens=800)
