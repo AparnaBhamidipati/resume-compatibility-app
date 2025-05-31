@@ -1,6 +1,7 @@
 import streamlit as st
 import logging
-from openai import OpenAI
+import openai  # Correct import for OpenAI library
+import PyPDF2
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -14,14 +15,13 @@ except KeyError as e:
     st.error(f"Missing key in secrets: {e}")
     st.stop()
 
-import PyPDF2
-
 # Initialize OpenAI API key
+openai.api_key = OPENAI_API_KEY
 
 def check_resume_compatibility(job_description: str, resume: str) -> str:
     """
     Calculates the compatibility score between a resume and a job description
-    and provides suggestions to improve the resume.Updated code
+    and provides suggestions to improve the resume.
 
     Args:
         job_description (str): The text content of the job description.
@@ -42,12 +42,15 @@ def check_resume_compatibility(job_description: str, resume: str) -> str:
 
     try:
         # Call OpenAI API to calculate compatibility and provide suggestions
-        response = OPENAI_API_KEY.chat.completions.create(model="gpt-4",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-        max_tokens=800)
-        return response.choices[0].message.content.strip()
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=800
+        )
+        return response['choices'][0]['message']['content'].strip()
     except Exception as e:
+        logging.error(f"Error calculating compatibility: {e}")
         return f"Error calculating compatibility: {e}"
 
 # Streamlit App

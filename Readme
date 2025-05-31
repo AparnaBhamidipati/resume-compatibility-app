@@ -17,7 +17,7 @@ cd POC/ResumeCompatibility_Streamlit
 git init
 git add .
 git commit -m "Initial commit for job search project"
-git remote add origin https://github.com/your-username/job-search-app.git
+git remote add origin https://github.com/AparnaBhamidipati/resume-compatibility-app
 git branch -M main
 git push -u origin main
 
