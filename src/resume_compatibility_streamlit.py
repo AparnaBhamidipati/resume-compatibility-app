@@ -21,7 +21,7 @@ import PyPDF2
 def check_resume_compatibility(job_description: str, resume: str) -> str:
     """
     Calculates the compatibility score between a resume and a job description
-    and provides suggestions to improve the resume.
+    and provides suggestions to improve the resume.Updated code
 
     Args:
         job_description (str): The text content of the job description.

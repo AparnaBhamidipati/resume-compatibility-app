@@ -13,7 +13,7 @@ Run the Streamlit app:
 Open your browser and navigate to the URL provided by Streamlit (e.g., http://localhost:8501)
 
 2. Push the code to github
-cd POC/jobSearch
+cd POC/ResumeCompatibility_Streamlit
 git init
 git add .
 git commit -m "Initial commit for job search project"
